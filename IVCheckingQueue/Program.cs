@@ -1,4 +1,4 @@
-using HtmlAgilityPack;
+﻿using HtmlAgilityPack;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -32,6 +32,7 @@ namespace IVCheckingQueue
         }
         static void Main(string[] args)
         {
+            Console.Title = "IVCheckingQueue";
             Console.OutputEncoding = System.Text.Encoding.GetEncoding(866);
             FileExists(DomainConfigFile);
             DomainConfig = DomainConfig.ReadFromJson(DomainConfigFile);
@@ -64,14 +65,14 @@ namespace IVCheckingQueue
         {
             InitializeDomains();
             Domains = Domains.OrderBy(x => x.WinningTemplatePublished).ToList();
-            FocusedDomains = Domains.Where(x => x.Status == "checking").Take(focusSize).ToList();
+            FocusedDomains = Domains.Where(x => x.Status == "checking").Take(FocusSize).ToList();
             var last = FocusedDomains.Last();
             while (true)
             {
-                if (FocusedDomains.Count < focusSize)
+                if (FocusedDomains.Count < FocusSize)
                 {
                     Domains = Domains.OrderBy(x => x.WinningTemplatePublished).ToList();
-                    var addition = Domains.Where(x=>!FocusedDomains.Contains(x)).Take(focusSize - FocusedDomains.Count);
+                    var addition = Domains.Where(x => !FocusedDomains.Contains(x)).Take(FocusSize - FocusedDomains.Count);
                     FocusedDomains.AddRange(addition);
                 }
                 var bd = await BasicDomain.GetDomainsAsync();
@@ -89,6 +90,10 @@ namespace IVCheckingQueue
                     FocusedDomains.Remove(d);
                 }
                 UpdatedDomains = FocusedDomains.Where(x => x.Changed).ToList();
+                var winners = bd.Where(x => !string.IsNullOrEmpty(x.Status) && x.Status.StartsWith("Winner")).Count();
+                var checking = bd.Where(x => !string.IsNullOrEmpty(x.Status) && x.Status == "checking").Count();
+                var total = bd.Count();
+                Console.Title = $"IVCheckingQueue: Domains: {total}; Winners: {winners} ( {(winners * 100.0 / total).ToString("00.00")}% ); Checking: {checking} ( {(checking * 100.0 / total).ToString("00.00")}% )";
                 await Task.Delay(DomainConfig.UpdateTime * 1000);
             }
         }
@@ -104,8 +109,8 @@ namespace IVCheckingQueue
             ts.RemoveAll(x => x == null);
             Task.WhenAll(ts);
             Domains = ts.Select(x => x.Result).ToList();
-            Console.Title = $"{Domains.Count} domains parsed in {sw.Elapsed.TotalSeconds.ToString("0.00")} s";
-            Console.WriteLine("Done");
+            //Console.Title = $"{Domains.Count} domains parsed in {sw.Elapsed.TotalSeconds.ToString("0.00")} s";
+            //Console.WriteLine("Done");
         }
 
         static void PrintDomain(Contest.Domain domain)
