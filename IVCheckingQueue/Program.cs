@@ -1,4 +1,4 @@
-﻿using HtmlAgilityPack;
+using HtmlAgilityPack;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -13,7 +13,7 @@ namespace IVCheckingQueue
 {
     class Program
     {
-        const int focusSize = 25;
+        const int FocusSize = 25;
 
         static List<Domain> Domains { get; set; } = new List<Domain>();
         static List<Domain> FocusedDomains { get; set; } = new List<Domain>();
