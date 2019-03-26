@@ -54,7 +54,7 @@ namespace IVCheckingQueue.Contest
             Name = name;
         }
 
-        public Domain(string name, string status):this(name)
+        public Domain(string name, string status) : this(name)
         {
             Status = status;
         }
@@ -74,11 +74,11 @@ namespace IVCheckingQueue.Contest
             var activeTemplates = section.Descendants().Where(_x => _x.HasClass("list-group-contest-item")).ToList();
             if (activeTemplates.Count > 0)
             {
-                Authors = activeTemplates.Select(x => x.Descendants().Where(_x=> _x.HasClass("contest-item-author")).SingleOrDefault()).Where(x => x != null).Select(x => x.InnerText).ToList();
+                Authors = activeTemplates.Select(x => x.Descendants().Where(_x => _x.HasClass("contest-item-author")).SingleOrDefault()).Where(x => x != null).Select(x => x.InnerText).ToList();
                 //  Mar 24 at 6:27 PM
                 var date = activeTemplates.First().Descendants().Where(_x => _x.HasClass("contest-item-date")).SingleOrDefault().InnerText;
                 WinningTemplatePublished = DateTime.ParseExact(date, "MMM d 'at' h:mm tt", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal);
-                if(!ignoreStatus)
+                if (!ignoreStatus)
                 {
                     var bd = await BasicDomain.GetDomainsAsync();
                     Status = bd.Where(x => x.Name == Name).Single().Status;
