@@ -1,4 +1,4 @@
-using HtmlAgilityPack;
+﻿using HtmlAgilityPack;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -13,8 +13,6 @@ namespace IVCheckingQueue
 {
     class Program
     {
-        const int FocusSize = 25;
-
         static List<Domain> Domains { get; set; } = new List<Domain>();
         static List<Domain> FocusedDomains { get; set; } = new List<Domain>();
         static List<Domain> UpdatedDomains { get; set; } = new List<Domain>();
@@ -36,6 +34,11 @@ namespace IVCheckingQueue
             Console.OutputEncoding = System.Text.Encoding.GetEncoding(866);
             FileExists(DomainConfigFile);
             Config = DomainConfig.ReadFromJson(DomainConfigFile);
+            if (Config.FocusSize == 0)
+            {
+                Config.FocusSize = 25;
+                DomainConfig.WriteToJson(Config, DomainConfigFile);
+            }
             var thr = new System.Threading.Thread(BackgroudProcessing)
             {
                 IsBackground = true

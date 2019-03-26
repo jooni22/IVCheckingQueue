@@ -18,6 +18,9 @@ namespace IVCheckingQueue
         [JsonProperty("updateTime")]
         public int UpdateTime { get; set; }
 
+        [JsonProperty("FocusSize")]
+        public int FocusSize { get; set; }
+
         [JsonProperty("domains")]
         public List<string> Domains { get; set; }
 
