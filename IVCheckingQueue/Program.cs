@@ -1,4 +1,4 @@
-﻿using HtmlAgilityPack;
+using HtmlAgilityPack;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -20,7 +20,7 @@ namespace IVCheckingQueue
         static List<Domain> UpdatedDomains { get; set; } = new List<Domain>();
 
         static string DomainConfigFile = @"domainConfig.json";
-        static DomainConfig DomainConfig = new DomainConfig();
+        static DomainConfig Config = new DomainConfig();
         public static void FileExists(string file)
         {
             if (!File.Exists(file))
@@ -35,7 +35,7 @@ namespace IVCheckingQueue
             Console.Title = "IVCheckingQueue";
             Console.OutputEncoding = System.Text.Encoding.GetEncoding(866);
             FileExists(DomainConfigFile);
-            DomainConfig = DomainConfig.ReadFromJson(DomainConfigFile);
+            Config = DomainConfig.ReadFromJson(DomainConfigFile);
             var thr = new System.Threading.Thread(BackgroudProcessing)
             {
                 IsBackground = true
@@ -54,9 +54,9 @@ namespace IVCheckingQueue
                     PrintDomain(d);
                 }
                 Console.WriteLine();
-                Console.WriteLine($"{DomainConfig.userName} is #{Domains.FindIndex(_x => _x.Authors.Contains(DomainConfig.userName))}");
-                Console.WriteLine($"{DomainConfig.userNameSecond} is #{Domains.FindIndex(_x => _x.Authors.Contains(DomainConfig.userNameSecond))}");
-                Thread.Sleep(DomainConfig.UpdateTime * 1000);
+                Console.WriteLine($"{Config.userName} is #{Domains.FindIndex(_x => _x.Authors.Contains(Config.userName))}");
+                Console.WriteLine($"{Config.userNameSecond} is #{Domains.FindIndex(_x => _x.Authors.Contains(Config.userNameSecond))}");
+                Thread.Sleep(Config.UpdateTime * 1000);
                 Console.Clear();
             }
         }
@@ -65,14 +65,14 @@ namespace IVCheckingQueue
         {
             InitializeDomains();
             Domains = Domains.OrderBy(x => x.WinningTemplatePublished).ToList();
-            FocusedDomains = Domains.Where(x => x.Status == "checking").Take(FocusSize).ToList();
+            FocusedDomains = Domains.Where(x => x.Status == "checking").Take(Config.FocusSize).ToList();
             var last = FocusedDomains.Last();
             while (true)
             {
-                if (FocusedDomains.Count < FocusSize)
+                if (FocusedDomains.Count < Config.FocusSize)
                 {
                     Domains = Domains.OrderBy(x => x.WinningTemplatePublished).ToList();
-                    var addition = Domains.Where(x => !FocusedDomains.Contains(x)).Take(FocusSize - FocusedDomains.Count);
+                    var addition = Domains.Where(x => !FocusedDomains.Contains(x)).Take(Config.FocusSize - FocusedDomains.Count);
                     FocusedDomains.AddRange(addition);
                 }
                 var bd = await BasicDomain.GetDomainsAsync();
@@ -94,7 +94,7 @@ namespace IVCheckingQueue
                 var checking = bd.Where(x => !string.IsNullOrEmpty(x.Status) && x.Status == "checking").Count();
                 var total = bd.Count();
                 Console.Title = $"IVCheckingQueue: Domains: {total}; Winners: {winners} ( {(winners * 100.0 / total).ToString("00.00")}% ); Checking: {checking} ( {(checking * 100.0 / total).ToString("00.00")}% )";
-                await Task.Delay(DomainConfig.UpdateTime * 1000);
+                await Task.Delay(Config.UpdateTime * 1000);
             }
         }
 
@@ -115,7 +115,7 @@ namespace IVCheckingQueue
 
         static void PrintDomain(Contest.Domain domain)
         {
-            var myDomainsList = DomainConfig.Domains;
+            var myDomainsList = Config.Domains;
             if (myDomainsList.Contains(domain.Name))
             {
                 Console.BackgroundColor = ConsoleColor.White;
@@ -142,7 +142,7 @@ namespace IVCheckingQueue
             if (domain.Status != "Empty")
             {
 
-                if (domain.Authors.Any(x => x == DomainConfig.userName || x == DomainConfig.userNameSecond)) Console.ForegroundColor = ConsoleColor.Green;
+                if (domain.Authors.Any(x => x == Config.userName || x == Config.userNameSecond)) Console.ForegroundColor = ConsoleColor.Green;
                 Console.Write(domain.Authors.First().PadRight(35));
                 Console.ResetColor();
                 if (domain.Status == "checking")
