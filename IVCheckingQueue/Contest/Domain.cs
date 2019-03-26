@@ -77,7 +77,7 @@ namespace IVCheckingQueue.Contest
                 Authors = activeTemplates.Select(x => x.Descendants().Where(_x=> _x.HasClass("contest-item-author")).SingleOrDefault()).Where(x => x != null).Select(x => x.InnerText).ToList();
                 //  Mar 24 at 6:27 PM
                 var date = activeTemplates.First().Descendants().Where(_x => _x.HasClass("contest-item-date")).SingleOrDefault().InnerText;
-                WinningTemplatePublished = DateTime.ParseExact(date, "MMM d 'at' h:mm tt", null, DateTimeStyles.AssumeUniversal);
+                WinningTemplatePublished = DateTime.ParseExact(date, "MMM d 'at' h:mm tt", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal);
                 if(!ignoreStatus)
                 {
                     var bd = await BasicDomain.GetDomainsAsync();
