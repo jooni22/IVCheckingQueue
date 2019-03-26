@@ -7,14 +7,20 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using IVCheckingQueue.Contest;
 
 namespace IVCheckingQueue
 {
     class Program
     {
-        public static int length = 0;
-        static string domainConfigFile = @"domainConfig.json";
-        static DomainConfig domainConfig = new DomainConfig();
+        const int focusSize = 25;
+
+        static List<Domain> Domains { get; set; } = new List<Domain>();
+        static List<Domain> FocusedDomains { get; set; } = new List<Domain>();
+        static List<Domain> UpdatedDomains { get; set; } = new List<Domain>();
+
+        static string DomainConfigFile = @"domainConfig.json";
+        static DomainConfig DomainConfig = new DomainConfig();
         public static void FileExists(string file)
         {
             if (!File.Exists(file))
@@ -26,95 +32,121 @@ namespace IVCheckingQueue
         }
         static void Main(string[] args)
         {
-            FileExists(domainConfigFile);
-            domainConfig = DomainConfig.ReadFromJson(domainConfigFile);
-            string sourcePath = @"source.txt";
-            FileExists(sourcePath);
-            string[] source = File.ReadAllLines(sourcePath);
-            List<string> domainList = new List<string>();
-            foreach (var line in source)
+            Console.OutputEncoding = System.Text.Encoding.GetEncoding(866);
+            FileExists(DomainConfigFile);
+            DomainConfig = DomainConfig.ReadFromJson(DomainConfigFile);
+            var thr = new System.Threading.Thread(BackgroudProcessing)
             {
-                string a = line.Split(' ').First();
-                if (a.Length > length) length = a.Length;
-                domainList.Add(a);
-            }
+                IsBackground = true
+            };
+            thr.Start();
+            while (Domains.Count == 0)
+                Thread.Sleep(25);
+            Console.Clear();
             while (true)
             {
-                GetInfo(domainList);
-                Thread.Sleep(domainConfig.UpdateTime * 1000);
+                int i = 0;
+                foreach (var d in FocusedDomains)
+                {
+                    ++i;
+                    Console.Write($"{i}.".PadRight(4));
+                    PrintDomain(d);
+                }
+                Console.WriteLine();
+                Console.WriteLine($"{DomainConfig.userName} is #{Domains.FindIndex(_x => _x.Authors.Contains(DomainConfig.userName))}");
+                Console.WriteLine($"{DomainConfig.userNameSecond} is #{Domains.FindIndex(_x => _x.Authors.Contains(DomainConfig.userNameSecond))}");
+                Thread.Sleep(DomainConfig.UpdateTime * 1000);
                 Console.Clear();
             }
         }
-        public static void AddSpaces(string line)
+
+        static async void BackgroudProcessing()
         {
-            for (int i = 0; i < length - line.Length; i++)
+            InitializeDomains();
+            Domains = Domains.OrderBy(x => x.WinningTemplatePublished).ToList();
+            FocusedDomains = Domains.Where(x => x.Status == "checking").Take(focusSize).ToList();
+            var last = FocusedDomains.Last();
+            while (true)
             {
-                Console.Write(" ");
+                if (FocusedDomains.Count < focusSize)
+                {
+                    Domains = Domains.OrderBy(x => x.WinningTemplatePublished).ToList();
+                    var addition = Domains.Where(x=>!FocusedDomains.Contains(x)).Take(focusSize - FocusedDomains.Count);
+                    FocusedDomains.AddRange(addition);
+                }
+                var bd = await BasicDomain.GetDomainsAsync();
+                foreach (var d in FocusedDomains)
+                {
+                    await d.UpdateAsync(true);
+                    d.Status = bd.FirstOrDefault(x => x.Name == d.Name).Status;
+                    if (string.IsNullOrEmpty(d.Status))
+                        d.Status = "Empty";
+                }
+                last = FocusedDomains.Last();
+                var old = FocusedDomains.Where(x => x.Changed && DateTime.Now.Subtract(x.LastChange).TotalMinutes > 10).ToList();
+                foreach (var d in old)
+                {
+                    FocusedDomains.Remove(d);
+                }
+                UpdatedDomains = FocusedDomains.Where(x => x.Changed).ToList();
+                await Task.Delay(DomainConfig.UpdateTime * 1000);
             }
         }
-        public static void GetInfo(List<string> list)
+
+        static void InitializeDomains()
         {
-            string ivDomain = "https://instantview.telegram.org/contest/";
-            HtmlWeb webDoc = new HtmlWeb();
-            HtmlAgilityPack.HtmlDocument driver = webDoc.Load(ivDomain);
-            List<string> myDomainsList = domainConfig.Domains;
-            var page = driver.DocumentNode.SelectSingleNode(".//*[@class=\"list-group-contest-rows\"]");
-            foreach (var element in list)
+            Console.WriteLine("Retrieving domains list");
+            var basicDomains = Contest.BasicDomain.GetDomains().Where(x => x.Status == "checking").ToList();
+            Console.WriteLine("Initial data collection");
+            var ts = new List<Task<Domain>>();
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            Parallel.ForEach(basicDomains, x => ts.Add(x.AdvanceAsync()));
+            ts.RemoveAll(x => x == null);
+            Task.WhenAll(ts);
+            Domains = ts.Select(x => x.Result).ToList();
+            Console.Title = $"{Domains.Count} domains parsed in {sw.Elapsed.TotalSeconds.ToString("0.00")} s";
+            Console.WriteLine("Done");
+        }
+
+        static void PrintDomain(Contest.Domain domain)
+        {
+            var myDomainsList = DomainConfig.Domains;
+            if (myDomainsList.Contains(domain.Name))
             {
-                var elementNode = page.SelectSingleNode($".//*[@data-domain=\"{element}\"]");
-                if (myDomainsList.Contains(element))
-                {
-                    Console.BackgroundColor = ConsoleColor.White;
-                    Console.ForegroundColor = ConsoleColor.Black;
-                }
-                Console.Write(element);
-                Console.ResetColor();
-                AddSpaces(element);
-                Console.Write(" - ");
-                string status = "";
-                if (elementNode == null)
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("Removed");
-                    Console.ResetColor();
-                    continue;
-                }
-                if (elementNode.SelectSingleNode($".//*[contains(@class,\"iv-deadline\")]") != null)
-                {
-                    status = elementNode.SelectSingleNode($".//*[contains(@class,\"iv-deadline\")]").InnerText;
-                }
-                else if (elementNode.SelectSingleNode($".//*[@class=\"status-winner\"]") != null)
-                {
-                    status = elementNode.SelectSingleNode($".//*[@class=\"status-winner\"]").InnerText;
-                }
-                else
-                {
-                    status = "Empty";
-                }
-                if (status == "checking")
-                {
-                    Console.ForegroundColor = ConsoleColor.Green;
-                }
-                if (status == "Winner '19")
-                {
-                    Console.ForegroundColor = ConsoleColor.Blue;
-                }
-                if (status == "Empty")
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                }
-                Console.Write(status);
-                Console.ResetColor();
-                Console.Write(" - ");
-                if (status != "Empty")
-                {
-                    string user = elementNode.SelectSingleNode($".//*[contains(@class,\"contest-item-candidate\")]/a").InnerText;
-                    if (user == domainConfig.userName || user == domainConfig.userNameSecond) Console.ForegroundColor = ConsoleColor.Green;
-                    Console.Write(user);
-                    Console.ResetColor();
-                }
-                Console.WriteLine();
+                Console.BackgroundColor = ConsoleColor.White;
+                Console.ForegroundColor = ConsoleColor.Black;
             }
+            Console.Write(domain.Name.PadRight(35));
+            Console.ResetColor();
+            if (domain.Changed)
+                Console.BackgroundColor = ConsoleColor.DarkBlue;
+            if (domain.Status == "checking")
+            {
+                Console.ForegroundColor = ConsoleColor.Green;
+            }
+            if (domain.Status == "Winner '19")
+            {
+                Console.ForegroundColor = ConsoleColor.Blue;
+            }
+            if (domain.Status == "Empty")
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+            }
+            Console.Write(domain.Status.PadRight(14));
+            Console.ResetColor();
+            if (domain.Status != "Empty")
+            {
+
+                if (domain.Authors.Any(x => x == DomainConfig.userName || x == DomainConfig.userNameSecond)) Console.ForegroundColor = ConsoleColor.Green;
+                Console.Write(domain.Authors.First().PadRight(35));
+                Console.ResetColor();
+                if (domain.Status == "checking")
+                    Console.Write($"-{DateTime.Now.Subtract(domain.WinningTemplatePublished).Subtract(TimeSpan.FromDays(3)).TotalDays.ToString("0.0")} d");
+                else
+                    Console.Write($"{TimeSpan.FromDays(3).Subtract(DateTime.Now.Subtract(domain.WinningTemplatePublished)).TotalHours.ToString("0.0")} h".PadLeft(1));
+            }
+            Console.WriteLine();
+
         }
     }
 }
