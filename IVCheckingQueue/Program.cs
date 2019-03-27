@@ -58,7 +58,8 @@ namespace IVCheckingQueue
                 }
                 Console.WriteLine();
                 Console.WriteLine($"{Config.userName} is #{Domains.FindIndex(_x => _x.Authors.Contains(Config.userName))}");
-                Console.WriteLine($"{Config.userNameSecond} is #{Domains.FindIndex(_x => _x.Authors.Contains(Config.userNameSecond))}");
+                if (!String.IsNullOrEmpty(Config.userNameSecond))
+                    Console.WriteLine($"{Config.userNameSecond} is #{Domains.FindIndex(_x => _x.Authors.Contains(Config.userNameSecond))}");
                 Thread.Sleep(Config.UpdateTime * 1000);
                 Console.Clear();
             }
