@@ -1,5 +1,6 @@
 # IVCheckingQueue
 This app needs two files:domainConfig.json and source.txt(old branch)
+
 Example of domainConfig.json
 ```json
 {
