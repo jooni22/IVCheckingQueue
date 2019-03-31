@@ -28,6 +28,7 @@ namespace IVCheckingQueue
         }
         static void Main(string[] args)
         {
+            Console.Title = "IVCheckingQueue";
             Thread.CurrentThread.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
             FileExists(domainConfigFile);
             domainConfig = DomainConfig.ReadFromJson(domainConfigFile);
