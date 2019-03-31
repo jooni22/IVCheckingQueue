@@ -71,7 +71,7 @@ namespace IVCheckingQueue
         }
         public static void AddSpaces(string line)
         {
-            for (int i = 0; i < length - line.Length; i++)
+            for (int i = 0; i < length + 5 - line.Length; i++)
             {
                 Console.Write(" ");
             }
@@ -124,7 +124,7 @@ namespace IVCheckingQueue
                     Console.BackgroundColor = ConsoleColor.White;
                     Console.ForegroundColor = ConsoleColor.Black;
                 }
-                Console.Write($"{i.ToString("000")}." + element.Key);
+                Console.Write($"{i.ToString("0").PadLeft(3)}." + element.Key);
                 Console.ResetColor();
                 AddSpaces(element.Key);
                 string status = "";
@@ -159,7 +159,7 @@ namespace IVCheckingQueue
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
                 }
-                Console.Write(status.PadLeft(15).PadRight(25));
+                Console.Write(status.PadRight(25));
                 Console.ResetColor();
                 if (status != "Empty")
                 {
