@@ -168,8 +168,8 @@ namespace IVCheckingQueue
                     if (user == domainConfig.userName || user == domainConfig.userNameSecond) Console.ForegroundColor = ConsoleColor.Green;
                     Console.Write(user.PadRight(30));
                     Console.ResetColor();
+                    Console.Write(element.Value);
                 }
-                Console.Write(element.Value);
                 Console.WriteLine();
                 if (i == domainConfig.FocusSize) break;
             }
