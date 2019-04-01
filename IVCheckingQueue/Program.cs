@@ -55,6 +55,7 @@ namespace IVCheckingQueue
                         while (true)
                         {
                             GetInfo(domainDic);
+                            Console.SetWindowPosition(0, 0);
                             Thread.Sleep(domainConfig.UpdateTime * 1000);
                             Console.Clear();
                         }
