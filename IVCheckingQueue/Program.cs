@@ -116,6 +116,10 @@ namespace IVCheckingQueue
             HtmlAgilityPack.HtmlDocument driver = webDoc.Load(ivDomain);
             List<string> myDomainsList = domainConfig.Domains;
             var page = driver.DocumentNode.SelectSingleNode(".//*[@class=\"list-group-contest-rows\"]");
+            var total = page.SelectNodes(".//*[@class=\"list-group-contest-item\"]").Count();
+            var winners = page.SelectNodes(".//*[@class=\"status-winner\"]").Count();
+            var checking = page.SelectNodes(".//*[@class=\"iv-deadline\"][contains(text(),\"checking\")]").Count();
+            Console.WriteLine($"Domains: {total}; Winners: {winners} ( {(winners * 100.0 / total).ToString("00.00")}% ); Checking: {checking} ( {(checking * 100.0 / total).ToString("00.00")}% )");
             int i = 0;
             foreach (var element in dic)
             {
