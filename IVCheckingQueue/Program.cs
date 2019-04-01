@@ -161,7 +161,7 @@ namespace IVCheckingQueue
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
                 }
-                Console.Write(status.PadRight(25));
+                Console.Write(status.PadRight(15));
                 Console.ResetColor();
                 if (status != "Empty")
                 {
