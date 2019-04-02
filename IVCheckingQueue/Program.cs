@@ -96,7 +96,7 @@ namespace IVCheckingQueue
             {
                 HtmlWeb webDoc1 = new HtmlWeb();
                 HtmlAgilityPack.HtmlDocument driver1 = webDoc.Load(ivDomain + element);
-                var date = driver1.DocumentNode.SelectSingleNode("//*[@class=\"contest-section\"][1]//*[@class=\"list-group-contest-item\"][1]//*[@class=\"contest-item-date\"]").InnerText;
+                var date = driver1.DocumentNode.SelectSingleNode("//*[@class=\"contest-section\"][1]//*[contains(@class,\"list-group-contest-item\")][1]//*[@class=\"contest-item-date\"]").InnerText;
                 var parsedDate = DateTime.ParseExact(date, "MMM d 'at' h:mm tt", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal).AddDays(3).Subtract(DateTime.Now).TotalHours;
                 domainDic.Add(element, Math.Round(parsedDate, 2));
                 Console.WriteLine(i + "." + element + " " + parsedDate.ToString("0.00"));
