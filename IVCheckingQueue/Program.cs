@@ -106,7 +106,7 @@ namespace IVCheckingQueue
             using (StreamWriter file = new StreamWriter(sourcePath))
                 foreach (var element in domainDic)
                 {
-                    file.WriteLine($"{element.Key} {element.Value}h"); 
+                    file.WriteLine($"{element.Key} {element.Value}h");
                 }
         }
         public static void GetInfo(Dictionary<string, string> dic)
@@ -171,6 +171,7 @@ namespace IVCheckingQueue
                 {
                     string user = elementNode.SelectSingleNode($".//*[contains(@class,\"contest-item-candidate\")]/a").InnerText;
                     if (user == domainConfig.userName || user == domainConfig.userNameSecond) Console.ForegroundColor = ConsoleColor.Green;
+                    if (user.Length > 27) user = Truncate(user, 27) + "...";
                     Console.Write(user.PadRight(30));
                     Console.ResetColor();
                     Console.Write(element.Value);
@@ -178,6 +179,11 @@ namespace IVCheckingQueue
                 Console.WriteLine();
                 if (i == domainConfig.FocusSize) break;
             }
+        }
+        public static string Truncate(string value, int maxLength)
+        {
+            if (string.IsNullOrEmpty(value)) return value;
+            return value.Length <= maxLength ? value : value.Substring(0, maxLength);
         }
         public static int Menu(string[] variants)
         {
