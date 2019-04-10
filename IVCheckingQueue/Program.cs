@@ -61,9 +61,7 @@ namespace IVCheckingQueue
                         }
                     case 1:
                         GetDomains();
-                        Console.WriteLine("Domains loaded");
-                        Console.WriteLine("Press any key to continue...");
-                        Console.ReadLine();
+
                         Console.Clear();
                         break;
                     default:
@@ -85,6 +83,12 @@ namespace IVCheckingQueue
             HtmlWeb webDoc = new HtmlWeb();
             HtmlAgilityPack.HtmlDocument driver = webDoc.Load(ivDomain);
             var domains = driver.DocumentNode.SelectNodes(".//*[@class=\"list-group-contest-item\"][.//*[@class=\"iv-deadline\"][contains(text(),\"checking\")]]");
+            if (domains == null)
+            {
+                Console.WriteLine("0 domains in checking state");
+                Console.ReadLine();
+                return;
+            }
             foreach (var element in domains)
             {
                 var dom = element.SelectSingleNode(".//*[@class=\"contest-item-domain\"]/a").InnerText;
@@ -108,6 +112,9 @@ namespace IVCheckingQueue
                 {
                     file.WriteLine($"{element.Key} {element.Value}h");
                 }
+            Console.WriteLine("Domains loaded");
+            Console.WriteLine("Press any key to continue...");
+            Console.ReadLine();
         }
         public static void GetInfo(Dictionary<string, string> dic)
         {
@@ -118,8 +125,14 @@ namespace IVCheckingQueue
             var page = driver.DocumentNode.SelectSingleNode(".//*[@class=\"list-group-contest-rows\"]");
             var total = page.SelectNodes(".//*[@class=\"list-group-contest-item\"]").Count();
             var winners = page.SelectNodes(".//*[@class=\"status-winner\"]").Count();
-            var checking = page.SelectNodes(".//*[@class=\"iv-deadline\"][contains(text(),\"checking\")]").Count();
-            Console.WriteLine($"Domains: {total}; Winners: {winners} ( {(winners * 100.0 / total).ToString("00.00")}% ); Checking: {checking} ( {(checking * 100.0 / total).ToString("00.00")}% )");
+            int checking = 0;
+            if (page.SelectNodes(".//*[@class=\"iv-deadline\"][contains(text(),\"checking\")]") != null)
+            {
+                checking = page.SelectNodes(".//*[@class=\"iv-deadline\"][contains(text(),\"checking\")]").Count();
+            }
+            var soon = page.SelectNodes(".//*[contains(@class,\"iv-deadline\")][contains(@class,\"soon\")]").Count();
+            var checkWait = total - (checking + winners);
+            Console.WriteLine($"Domains: {total}; Winners: {winners} ( {(winners * 100.0 / total).ToString("00.00")}% ); Checking: {checking} ( {(checking * 100.0 / total).ToString("00.00")}% ); Waiting: {checkWait} ( {(checkWait * 100.0 / total).ToString("00.00")}% ); Soon: {soon}");
             int i = 0;
             foreach (var element in dic)
             {
