@@ -216,12 +216,16 @@ namespace IVCheckingQueue
         public static List<Domain> UpdateIssues(List<Domain> list)
         {
             string ivDomain = "https://instantview.telegram.org/contest/";
+            object sync = new object();
             Parallel.ForEach(list, new ParallelOptions() { MaxDegreeOfParallelism = 20 }, element =>
             {
                 HtmlWeb webDoc1 = new HtmlWeb();
                 HtmlAgilityPack.HtmlDocument driver1 = webDoc1.Load(ivDomain + element.Name);
                 var issues = driver1.DocumentNode.SelectSingleNode(".//*[@class=\"contest-section\"][1]//*[contains(@class,\"list-group-contest-item\")][1]//*[@class=\"contest-item-status\"]");
-                element.Issues = issues.InnerText;
+                lock (sync)
+                {
+                    element.Issues = issues.InnerText;
+                }
             });
             return list;
         }
