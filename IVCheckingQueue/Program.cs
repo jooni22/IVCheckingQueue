@@ -98,9 +98,9 @@ namespace IVCheckingQueue
             {
                 HtmlWeb webDoc1 = new HtmlWeb();
                 HtmlAgilityPack.HtmlDocument driver1 = webDoc.Load(ivDomain + element);
-                var date = driver1.DocumentNode.SelectSingleNode("//*[@class=\"contest-section\"][1]//*[contains(@class,\"list-group-contest-item\")][1]//*[@class=\"contest-item-date\"]").InnerText;
+                var date = driver1.DocumentNode.SelectSingleNode(".//*[@class=\"contest-section\"][1]//*[contains(@class,\"list-group-contest-item\")][1]//*[@class=\"contest-item-date\"]").InnerText;
                 var parsedDate = DateTime.ParseExact(date, "MMM d 'at' h:mm tt", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal).AddDays(3).Subtract(DateTime.Now).TotalHours;
-                var issues = driver1.DocumentNode.SelectSingleNode("//*[@class=\"contest-section\"][1]//*[contains(@class,\"list-group-contest-item\")][1]//*[@class=\"contest-item-status-disputed\"]");
+                var issues = driver1.DocumentNode.SelectSingleNode(".//*[@class=\"contest-section\"][1]//*[contains(@class,\"list-group-contest-item\")][1]//*[@class=\"contest-item-status\"]");
                 Domain domain = new Domain
                 {
                     Name = element,
@@ -219,9 +219,9 @@ namespace IVCheckingQueue
             Parallel.ForEach(list, new ParallelOptions() { MaxDegreeOfParallelism = 20 }, element =>
             {
                 HtmlWeb webDoc1 = new HtmlWeb();
-                HtmlAgilityPack.HtmlDocument driver1 = webDoc1.Load(ivDomain + element);
-                var issues = driver1.DocumentNode.SelectSingleNode("//*[@class=\"contest-section\"][1]//*[contains(@class,\"list-group-contest-item\")][1]//*[@class=\"contest-item-status-disputed\"]");
-                if (issues != null) element.Issues = issues.InnerText;
+                HtmlAgilityPack.HtmlDocument driver1 = webDoc1.Load(ivDomain + element.Name);
+                var issues = driver1.DocumentNode.SelectSingleNode(".//*[@class=\"contest-section\"][1]//*[contains(@class,\"list-group-contest-item\")][1]//*[@class=\"contest-item-status\"]");
+                element.Issues = issues.InnerText;
             });
             return list;
         }
