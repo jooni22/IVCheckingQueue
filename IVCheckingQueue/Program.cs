@@ -1,4 +1,5 @@
 ﻿using HtmlAgilityPack;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -16,7 +17,7 @@ namespace IVCheckingQueue
         public static int length = 0;
         static string domainConfigFile = @"domainConfig.json";
         static DomainConfig domainConfig = new DomainConfig();
-        static string sourcePath = @"source.txt";
+        static string sourcePath = @"source.json";
         public static void FileExists(string file)
         {
             if (!File.Exists(file))
@@ -35,8 +36,6 @@ namespace IVCheckingQueue
             if (!File.Exists(sourcePath))
             {
                 GetDomains();
-                Console.WriteLine("Domains loaded");
-                Console.WriteLine("Press any key to continue...");
             }
             bool repeat = true;
             while (repeat)
@@ -45,24 +44,22 @@ namespace IVCheckingQueue
                 switch (Menu(variants))
                 {
                     case 0:
-                        Dictionary<string, string> domainDic = new Dictionary<string, string>();
-                        string[] source = File.ReadAllLines(sourcePath);
-                        domainDic = source.Select(item => item.Split(' ')).ToDictionary(s => s[0], s => s[1]);
-                        foreach (var line in domainDic)
+                        List<Domain> domain = new List<Domain>();
+                        string jsonString = System.IO.File.ReadAllText(sourcePath);
+                        domain = JsonConvert.DeserializeObject<List<Domain>>(jsonString);
+                        foreach (var line in domain)
                         {
-                            if (line.Key.Length > length) length = line.Key.Length;
+                            if (line.Name.Length > length) length = line.Name.Length;
                         }
                         while (true)
                         {
-                            GetInfo(domainDic);
+                            GetInfo(domain);
                             Console.SetWindowPosition(0, 0);
                             Thread.Sleep(domainConfig.UpdateTime * 1000);
                             Console.Clear();
                         }
                     case 1:
                         GetDomains();
-
-                        Console.Clear();
                         break;
                     default:
                         break;
@@ -82,42 +79,59 @@ namespace IVCheckingQueue
             string ivDomain = "https://instantview.telegram.org/contest/";
             HtmlWeb webDoc = new HtmlWeb();
             HtmlAgilityPack.HtmlDocument driver = webDoc.Load(ivDomain);
-            var domains = driver.DocumentNode.SelectNodes(".//*[@class=\"list-group-contest-item\"][.//*[@class=\"iv-deadline\"][contains(text(),\"checking\")]]");
-            if (domains == null)
+            var domainNodes = driver.DocumentNode.SelectNodes(".//*[@class=\"list-group-contest-item\"][.//*[@class=\"iv-deadline\"][contains(text(),\"checking\")]]");
+            if (domainNodes == null)
             {
                 Console.WriteLine("0 domains in checking state");
                 Console.ReadLine();
                 return;
             }
-            foreach (var element in domains)
+            foreach (var element in domainNodes)
             {
                 var dom = element.SelectSingleNode(".//*[@class=\"contest-item-domain\"]/a").InnerText;
                 domainList.Add(dom);
             }
-            Dictionary<string, double> domainDic = new Dictionary<string, double>();
+            List<Domain> domains = new List<Domain>();
             int i = 1;
+            object sync = new object();
             Parallel.ForEach(domainList, new ParallelOptions() { MaxDegreeOfParallelism = 20 }, element =>
             {
                 HtmlWeb webDoc1 = new HtmlWeb();
                 HtmlAgilityPack.HtmlDocument driver1 = webDoc.Load(ivDomain + element);
                 var date = driver1.DocumentNode.SelectSingleNode("//*[@class=\"contest-section\"][1]//*[contains(@class,\"list-group-contest-item\")][1]//*[@class=\"contest-item-date\"]").InnerText;
                 var parsedDate = DateTime.ParseExact(date, "MMM d 'at' h:mm tt", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal).AddDays(3).Subtract(DateTime.Now).TotalHours;
-                domainDic.Add(element, Math.Round(parsedDate, 2));
-                Console.WriteLine(i + "." + element + " " + parsedDate.ToString("0.00"));
+                var issues = driver1.DocumentNode.SelectSingleNode("//*[@class=\"contest-section\"][1]//*[contains(@class,\"list-group-contest-item\")][1]//*[@class=\"contest-item-status-disputed\"]");
+                Domain domain = new Domain
+                {
+                    Name = element,
+                    Date = Math.Round(parsedDate, 2),
+                };
+                Console.Write(i + "." + element + " " + parsedDate.ToString("0.00"));
+                if (issues != null)
+                {
+                    domain.Issues = issues.InnerText;
+                    Console.Write(" " + issues.InnerText);
+                }
+                Console.WriteLine();
+                lock (sync)
+                {
+                    domains.Add(domain);
+                }
                 i++;
             });
-            domainDic = domainDic.OrderBy(x => x.Value).ToDictionary(x => x.Key, x => x.Value);
-            using (StreamWriter file = new StreamWriter(sourcePath))
-                foreach (var element in domainDic)
-                {
-                    file.WriteLine($"{element.Key} {element.Value}h");
-                }
+            domains = domains.OrderBy(x => x.Date).ToList();
+            string json = JsonConvert.SerializeObject(domains, Formatting.Indented);
+            File.WriteAllText(sourcePath, json);
             Console.WriteLine("Domains loaded");
             Console.WriteLine("Press any key to continue...");
             Console.ReadLine();
+            Console.Clear();
         }
-        public static void GetInfo(Dictionary<string, string> dic)
+        public static void GetInfo(List<Domain> list)
         {
+            list = UpdateIssues(list);
+            string json = JsonConvert.SerializeObject(list, Formatting.Indented);
+            File.WriteAllText(sourcePath, json);
             string ivDomain = "https://instantview.telegram.org/contest/";
             HtmlWeb webDoc = new HtmlWeb();
             HtmlAgilityPack.HtmlDocument driver = webDoc.Load(ivDomain);
@@ -134,18 +148,18 @@ namespace IVCheckingQueue
             var checkWait = total - (checking + winners);
             Console.WriteLine($"Domains: {total}; Winners: {winners} ( {(winners * 100.0 / total).ToString("00.00")}% ); Checking: {checking} ( {(checking * 100.0 / total).ToString("00.00")}% ); Waiting: {checkWait} ( {(checkWait * 100.0 / total).ToString("00.00")}% ); Soon: {soon}");
             int i = 0;
-            foreach (var element in dic)
+            foreach (var element in list)
             {
                 i++;
-                var elementNode = page.SelectSingleNode($".//*[@data-domain=\"{element.Key}\"]");
-                if (myDomainsList.Contains(element.Key))
+                var elementNode = page.SelectSingleNode($".//*[@data-domain=\"{element.Name}\"]");
+                if (myDomainsList.Contains(element.Name))
                 {
                     Console.BackgroundColor = ConsoleColor.White;
                     Console.ForegroundColor = ConsoleColor.Black;
                 }
-                Console.Write($"{i.ToString("0").PadLeft(3)}." + element.Key);
+                Console.Write($"{i.ToString("0").PadLeft(3)}." + element.Name);
                 Console.ResetColor();
-                AddSpaces(element.Key);
+                AddSpaces(element.Name);
                 string status = "";
                 if (elementNode == null)
                 {
@@ -184,11 +198,12 @@ namespace IVCheckingQueue
                 {
                     string user = elementNode.SelectSingleNode($".//*[contains(@class,\"contest-item-candidate\")]/a").InnerText;
                     if (user == domainConfig.userName || user == domainConfig.userNameSecond) Console.ForegroundColor = ConsoleColor.Green;
-                    if (user.Length > 27) user = Truncate(user, 27) + "...";
-                    Console.Write(user.PadRight(30));
+                    if (user.Length > 22) user = Truncate(user, 22) + "...";
+                    Console.Write(user.PadRight(25));
                     Console.ResetColor();
-                    Console.Write(element.Value);
+                    Console.Write(element.Date.ToString("0.00") + "h".PadRight(8));
                 }
+                if (!string.IsNullOrEmpty(element.Issues)) Console.Write(element.Issues);
                 Console.WriteLine();
                 if (i == domainConfig.FocusSize) break;
             }
@@ -197,6 +212,18 @@ namespace IVCheckingQueue
         {
             if (string.IsNullOrEmpty(value)) return value;
             return value.Length <= maxLength ? value : value.Substring(0, maxLength);
+        }
+        public static List<Domain> UpdateIssues(List<Domain> list)
+        {
+            string ivDomain = "https://instantview.telegram.org/contest/";
+            Parallel.ForEach(list, new ParallelOptions() { MaxDegreeOfParallelism = 20 }, element =>
+            {
+                HtmlWeb webDoc1 = new HtmlWeb();
+                HtmlAgilityPack.HtmlDocument driver1 = webDoc1.Load(ivDomain + element);
+                var issues = driver1.DocumentNode.SelectSingleNode("//*[@class=\"contest-section\"][1]//*[contains(@class,\"list-group-contest-item\")][1]//*[@class=\"contest-item-status-disputed\"]");
+                if (issues != null) element.Issues = issues.InnerText;
+            });
+            return list;
         }
         public static int Menu(string[] variants)
         {
