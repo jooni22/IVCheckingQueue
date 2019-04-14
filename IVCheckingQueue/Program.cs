@@ -201,7 +201,7 @@ namespace IVCheckingQueue
                     if (user.Length > 22) user = Truncate(user, 22) + "...";
                     Console.Write(user.PadRight(25));
                     Console.ResetColor();
-                    Console.Write(element.Date.ToString("0.00") + "h".PadRight(8));
+                    Console.Write(element.Date.ToString("00.00") + "h".PadRight(8));
                 }
                 if (!string.IsNullOrEmpty(element.Issues)) Console.Write(element.Issues);
                 Console.WriteLine();
