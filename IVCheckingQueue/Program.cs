@@ -144,9 +144,14 @@ namespace IVCheckingQueue
             {
                 checking = page.SelectNodes(".//*[@class=\"iv-deadline\"][contains(text(),\"checking\")]").Count();
             }
+            int free = 0;
+            if (page.SelectNodes(".//*[@class=\"list-group-contest-item\"][not(.//*[contains(@class,\"has-candidate\")])]") != null)
+            {
+                free = page.SelectNodes(".//*[@class=\"list-group-contest-item\"][not(.//*[contains(@class,\"has-candidate\")])]").Count();
+            }
             var soon = page.SelectNodes(".//*[contains(@class,\"iv-deadline\")][contains(@class,\"soon\")]").Count();
-            var checkWait = total - (checking + winners);
-            Console.WriteLine($"Domains: {total}; Winners: {winners} ( {(winners * 100.0 / total).ToString("00.00")}% ); Checking: {checking} ( {(checking * 100.0 / total).ToString("00.00")}% ); Waiting: {checkWait} ( {(checkWait * 100.0 / total).ToString("00.00")}% ); Soon: {soon}");
+            var checkWait = page.SelectNodes(".//*[contains(@class,\"iv-deadline\")][not(contains(text(),\"checking\"))]").Count();
+            Console.WriteLine($"Domains: {total}; Winners: {winners} ( {(winners * 100.0 / total).ToString("00.00")}% ); Checking: {checking} ( {(checking * 100.0 / total).ToString("00.00")}% ); Waiting: {checkWait} ( {(checkWait * 100.0 / total).ToString("00.00")}% ); Soon: {soon}; Free: {free}");
             int i = 0;
             foreach (var element in list)
             {
