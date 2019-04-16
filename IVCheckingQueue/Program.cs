@@ -227,9 +227,19 @@ namespace IVCheckingQueue
                 HtmlWeb webDoc1 = new HtmlWeb();
                 HtmlAgilityPack.HtmlDocument driver1 = webDoc1.Load(ivDomain + element.Name);
                 var issues = driver1.DocumentNode.SelectSingleNode(".//*[@class=\"contest-section\"][1]//*[contains(@class,\"list-group-contest-item\")][1]//*[@class=\"contest-item-status\"]");
-                lock (sync)
+                if (issues != null)
                 {
-                    element.Issues = issues.InnerText;
+                    lock (sync)
+                    {
+                        element.Issues = issues.InnerText;
+                    }
+                }
+                else
+                {
+                    lock (sync)
+                    {
+                        element.Issues = null;
+                    }
                 }
             });
             return list;
